@@ -1,0 +1,177 @@
+//Put our React App in a Wordpress
+Create the Wordpress Plugin:
+in /var/www/html (install Wordpress if not already exist) 
+in /var/www/html/wp/wp-content/plugins (mkdir react-app)
+in /var/www/html/wp/wp-content/plugins/react-app (vim react-app.php)
+Still inside /react-app (mkdir build)
+cd build and vim index.js.
+Now that we have our react-app.php and our index.js file inside /build.
+We will create our plugin:
+In react-app.php put the following code bellow:
+<?php
+/**
+ * @package React
+ * @version 1.0.0
+ */
+/*
+Plugin Name: React connect
+Description: Un plugin de fou
+Version: 1.0.0
+Licence: GPLv2 or later
+*/
+defined('ABSPATH') or die('Hey, you can\t access this file, you silly human!');
+
+Next we need to create the shortcode that we will put inside our wordpress page,
+Create the function for the shortcode:
+
+add_shortcode( 'connect_react_app', 'connect_react_app' );
+
+    function connect_react_app( $atts = array(), $content = null , $tag = 'connect_react_app' ){
+        ob_start();
+        ?>
+            <div id="app">App goes here</div>
+}
+We need to write in the edit of the wordpress page our shortcode ([connect_react_app]) in order to display our <div>.
+Now we need to enqueue our index.js file to our Page thanks to the following code just bellow our function connect_react_app:
+ 
+ add_shortcode( 'connect_react_app', 'connect_react_app' );
+
+    function connect_react_app( $atts = array(), $content = null , $tag = 'connect_react_app' ){
+        ob_start();
+        ?>
+            <div id="app">App goes here</div>
+
+        <?php wp_enqueue_script( 'react_connect', plugins_url( 'build/index.js', __FILE__ ), array( 'wp-element' ), time(), true ); ?>
+        <?php return ob_get_clean();  
+}
+
+Jut write console.log(wp.element) in order to comfirm the connection.
+
+Now we have our Wordpress Page and our index.js file connected !
+
+Next step we need to install Node:
+So we need to install nvm and npm (Normally install nvm will install npm)
+
+Installing nvm:
+Write on the root of our file (/react-app):
+curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.33.0/install.sh | bash
+
+Now we need to check /.bashrc and see if the following code is add bellow:
+export NVM_DIR="/home/yourusername/.nvm" (yourusername = thomas in my case)
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+If its not the case then write the lines.
+
+In order to check if nvm and npm are installed we can write:
+nvm --version
+npm --version
+
+Now that nvm is installed and /.bashrc is edit we can install Node:
+nvm install node
+
+We need to initialized a package.json at the root (/react-app):
+npm init
+
+Next we need to install wp-scripts (@wordpress/scripts) which will bundle our JSX and other files code without problem in wordpress:
+npm install @wordpress/scripts --save-dev
+
+Now will we check our package.json and add some shortcuts:
+// package.json
+{
+  "name": "react-example",
+  "version": "1.0.0",
+  "description": "Example of React integration in a plugin",
+  "main": "index.js",
+  "author": "Vincent Dubroeucq",
+  "scripts": {
+    "build": "wp-scripts build",
+    "start": "wp-scripts start"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "@wordpress/scripts": "^6.1.1"
+  }
+}
+Let's create a /src file with index.js inside and add:
+console.log('index.js is bundled properly');
+
+And type in the terminal:
+npm start
+
+Check the console in the Wordpress Page. 
+IMPORTANT: Dont forget to install all the necessary dependencies in package.json (react-router-dom...)
+
+Everything is in place. wp-scripts is installed and ready to package our code from src/index.js to build/index.js, and we made sure to load the script from the build/ folder.
+
+Create a webpack.config.js file at the root (/react-connect) and put:
+const defaults = require('@wordpress/scripts/config/webpack.config');
+
+module.exports = {
+  ...defaults,
+  externals: {
+    react: 'React',
+    'react-dom': 'ReactDOM',
+  },
+};
+
+Now it remains to code our application, from the root file src/index.js!
+
+But be carefull in the index.js code we need to modify some details:
+// in src/index.js
+
+// Added lines to use wp.element instead of importing React
+const { render } = wp.element; //we are using wp.element here!
+
+if (document.getElementById('app')) { //check if element exists before rendering  // Render the app inside our shortcode's app div who was create at the begining line 42
+  render(
+    <React.StrictMode>
+    <BrowserRouter>
+       <App /> 
+    </BrowserRouter>
+    </React.StrictMode>, document.getElementById('app'));
+}
+
+For the production:
+stop the npm start and write:
+npm run build
+
+The application will be re-generated and minified. It is this script that must be delivered and loaded in production
+
+If you think about it, our extension is only made up of two files: our PHP file and a single JavaScript file!
+
+
+
+index.js file:
+import React from 'react';
+import ReactDOM from 'react-dom';
+import App from './App';
+import { BrowserRouter } from 'react-router-dom'
+
+
+// const root = ReactDOM.createRoot(document.getElementById('app'));
+// root.render(
+//   <React.StrictMode>
+//     <BrowserRouter>
+//     <App />
+//     </BrowserRouter>
+//   </React.StrictMode>
+// );
+const { render } = wp.element; //we are using wp.element here!
+
+if (document.getElementById('app')) { //check if element exists before rendering
+  render(
+    <React.StrictMode>
+    <BrowserRouter>
+       <App />
+    </BrowserRouter>
+    </React.StrictMode>, document.getElementById('app'));
+}
+
+Thomas.R
+
+
+
+
+
+
+
+
